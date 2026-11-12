@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Build the data first{% endblock %}
+{% block content %}
+<section class="card fill" style="justify-content:center">
+  <div class="empty">
+    <strong>The data warehouse has not been built yet</strong>
+    <p>Copy the extract files into <code>data/raw/</code>, then run <code>python -m pipeline.run</code>.</p>
+    <p class="small" style="margin-top:8px">Expected file: {{ path }}</p>
+  </div>
+</section>
+{% endblock %}

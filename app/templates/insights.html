@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Insights{% endblock %}
+{% block content %}
+{% set share_now = share[-1].esg_name_share if share else 0 %}
+{% set peak = share|map(attribute='esg_name_share')|max if share else 0 %}
+<div class="view-head">
+  <div>
+    <div class="eyebrow">Vocabulary of Luxembourg fund names</div>
+    <h1>Insights</h1>
+  </div>
+  <div class="actions"><a class="btn light" href="/renames">All renames</a></div>
+</div>
+
+<div class="board" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'flow share' 'flow words'">
+  <section class="card fixed-h" style="grid-area:flow">
+    <div class="card-head"><div><h2>What replaced the ESG terms</h2><p>Since 14 May 2024. Left: the ESG term removed. Right: the word that took its place.</p></div></div>
+    <div class="card-body fill" style="display:flex"><div id="c-flows" class="chart" role="img" aria-label="Flow diagram from removed ESG terms to replacement words"></div></div>
+  </section>
+
+  <section class="card fixed-h" style="grid-area:share">
+    <div class="card-head">
+      <div><h2>Fund names with an ESG term</h2><p>Share at each quarter end, rebuilt from the name history of the {{ k.history_checked|int }} funds checked</p></div>
+      <div style="text-align:right"><div style="font-size:22px;font-weight:600;letter-spacing:-.02em">{{ share_now }}%</div><div class="small muted">peak {{ peak }}%</div></div>
+    </div>
+    <div class="card-body fill" style="display:flex"><div id="c-share" class="chart" role="img" aria-label="Line chart of the share of fund names containing an ESG term"></div></div>
+  </section>
+
+  <section class="card fixed-h" style="grid-area:words">
+    <div class="card-head"><div><h2>Words out, words in</h2><p>ESG terms removed, and the vaguer words that replaced them, since 14 May 2024</p></div></div>
+    <div class="card-body fill" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div id="c-out" class="chart" role="img" aria-label="Bar chart of ESG terms removed"></div>
+      <div id="c-in" class="chart" role="img" aria-label="Bar chart of replacement words"></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('vendor/echarts.min.js') }}"></script>
+<script src="{{ asset('charts.js') }}"></script>
+<script>
+(function () {
+  var c = NW.c, F = {{ flows|tojson_safe }}, S = {{ share|tojson_safe }}, W = {{ words|tojson_safe }}, D = {{ dropped|tojson_safe }}, M = {{ milestones|tojson_safe }};
+  // sankey
+  var f = NW.init('c-flows');
+  if (f) {
+    if (!F.length) NW.empty('c-flows', 'No ESG term removed in the data yet');
+    else {
+      var nodes = {}, links = [];
+      F.forEach(function (r) {
+        var src = r.dropped_term, dst = (r.replacement_kind === 'other ESG term' ? 'ESG: ' : '') + r.replacement + ' ';
+        nodes[src] = { name: src, itemStyle: { color: c.removed } };
+        nodes[dst] = { name: dst, itemStyle: { color: r.replacement_kind === 'vague word' ? c.vague : (r.replacement_kind === 'no replacement' ? c.other : c.reworded) } };
+        links.push({ source: src, target: dst, value: r.renames });
+      });
+      f.setOption({
+        tooltip: NW.tooltip({ trigger: 'item', formatter: function (p) { return p.dataType === 'edge' ? p.data.source + ' → ' + p.data.target.trim() + ': <b>' + p.data.value + '</b>' : p.name.trim(); } }),
+        series: [{ type: 'sankey', left: 92, right: 92, top: 4, bottom: 4, nodeWidth: 10, nodeGap: 8, layoutIterations: 64,
+          data: Object.values(nodes), links: links, emphasis: { focus: 'adjacency' },
+          lineStyle: { color: 'gradient', opacity: 0.28, curveness: 0.5 },
+          label: { color: c.ink2, fontFamily: NW.font, fontSize: 12 },
+          levels: [{ depth: 0, label: { position: 'left' } }, { depth: 1, label: { position: 'right' } }] }]
+      });
+    }
+  }
+  // share line with milestones
+  var s = NW.init('c-share');
+  if (s) {
+    var labels = S.map(function (r) { return r.quarter.replace('-', ' '); });
+    var qOf = function (d) { var dt = new Date(d); return dt.getFullYear() + ' Q' + (Math.floor(dt.getMonth() / 3) + 1); };
+    var marks = M.filter(function (m) { return m.milestone_date >= '2024-01-01' && labels.indexOf(qOf(m.milestone_date)) >= 0; })
+      .map(function (m) { return { xAxis: qOf(m.milestone_date), label: { formatter: m.label } }; });
+    s.setOption({
+      grid: { left: 38, right: 12, top: 12, bottom: 24 },
+      tooltip: NW.tooltip({ trigger: 'axis', formatter: function (ps) { var r = S[ps[0].dataIndex]; return r.quarter + '<br><b>' + r.esg_name_share + '%</b> of ' + r.funds + ' funds'; } }),
+      xAxis: NW.axis({ type: 'category', data: labels, boundaryGap: false, axisLabel: { color: c.ink3, fontSize: 10.5, fontFamily: NW.font, interval: 7 } }),
+      yAxis: NW.axis({ type: 'value', splitNumber: 3, axisLabel: { formatter: '{value}%', color: c.ink3, fontSize: 10.5, fontFamily: NW.font } }),
+      series: [{ type: 'line', data: S.map(function (r) { return r.esg_name_share; }), symbol: 'none', lineStyle: { color: c.brand, width: 2 },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(37,99,235,0.18)' }, { offset: 1, color: 'rgba(37,99,235,0)' }] } },
+        markLine: { symbol: 'none', silent: true, lineStyle: { color: c.ink4, type: [3, 3], width: 1 }, label: { show: false }, data: marks } }]
+    });
+  }
+  // horizontal bars
+  var hbar = function (id, rows, key, color, title) {
+    var ch = NW.init(id); if (!ch) return;
+    if (!rows.length) { NW.empty(id, 'No data yet'); return; }
+    var r = rows.slice().reverse();
+    ch.setOption({
+      title: { text: title, left: 0, top: 0, textStyle: { fontFamily: NW.font, fontSize: 12, fontWeight: 500, color: c.ink2 } },
+      grid: { left: 86, right: 34, top: 26, bottom: 4 },
+      tooltip: NW.tooltip({ trigger: 'item', formatter: '{b}: <b>{c}</b> renames' }),
+      xAxis: { type: 'value', show: false },
+      yAxis: { type: 'category', data: r.map(function (x) { return x[key]; }), axisLine: { show: false }, axisTick: { show: false },
+        axisLabel: { color: c.ink2, fontFamily: NW.font, fontSize: 11.5 } },
+      series: [{ type: 'bar', data: r.map(function (x) { return x.renames; }), barWidth: 12, itemStyle: { color: color, borderRadius: [0, 4, 4, 0] },
+        label: { show: true, position: 'right', color: c.ink3, fontFamily: NW.font, fontSize: 11 } }]
+    });
+  };
+  hbar('c-out', D, 'term', c.removed, 'ESG terms removed');
+  hbar('c-in', W, 'word', c.vague, 'Replacement words');
+})();
+</script>
+{% endblock %}

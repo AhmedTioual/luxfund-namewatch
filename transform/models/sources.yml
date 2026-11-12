@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: Files produced by extract/gleif_extract.py (GLEIF Golden Copy + LEI field-modification history), loaded by pipeline/load_raw.py.
+    tables:
+      - name: funds
+        description: One row per LEI with legal address in Luxembourg and entity category FUND.
+      - name: name_changes
+        description: Dated legal-name changes from the GLEIF field-modifications endpoint.
+      - name: history_checked
+        description: Funds whose change history was downloaded (the population for time-series analysis).
+      - name: fund_relationships
+        description: Fund manager, umbrella and master-fund links (GLEIF relationship records and the funds' own LEI records).
+      - name: related_entities
+        description: Name, country and status of every entity a Luxembourg fund is linked to.
+      - name: name_classifications
+        description: Optional LLM classification of ESG-related renames (ai/classify_names.py).
+      - name: load_log
+        description: One row per file load, with SHA-256 fingerprint and row count.

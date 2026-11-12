@@ -1,0 +1,18 @@
+{% if latest %}
+<table class="stack">
+  <thead><tr><th style="width:110px">Date</th><th>Legal name change</th><th style="width:200px">Management company</th><th style="width:190px">Type</th><th style="width:60px"></th></tr></thead>
+  <tbody>
+  {% for r in latest %}
+  <tr>
+    <td class="nowrap muted">{{ r.change_date|date }}</td>
+    <td><span class="name-cell">{{ r.diff }}</span>{% if r.ai_rationale %}<span class="sub">AI review: {{ r.ai_rationale }}</span>{% endif %}</td>
+    <td class="small muted"><span class="ellipsis" style="display:block;max-width:200px">{{ r.manager_name or '—' }}</span></td>
+    <td><span class="chip {{ r.category }}" title="{{ CATEGORY_LABELS[r.category] }}">{{ CATEGORY_SHORT[r.category] }}</span>{% if r.category_source == 'llm' %} <span class="chip ai" title="Classified by the AI review">AI</span>{% endif %}</td>
+    <td class="num"><a href="/funds/{{ r.lei }}">Fund</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty"><strong>No rename matches</strong>Try another type, period or search.</div>
+{% endif %}

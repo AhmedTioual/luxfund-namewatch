@@ -1,0 +1,33 @@
+name: namewatch
+version: "1.0.0"
+config-version: 2
+profile: namewatch
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  esma_publication_date: "2024-05-14"   # guidelines published in all EU languages
+  esma_new_funds_date: "2024-11-21"     # apply to funds created from this date
+  esma_existing_funds_date: "2025-05-21"  # apply to existing funds
+  history_start: "2014-01-01"
+
+models:
+  namewatch:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: table
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  namewatch:
+    +schema: reference

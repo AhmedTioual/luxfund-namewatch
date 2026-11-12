@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ f.legal_name }}{% endblock %}
+{% block content %}
+<div class="view-head">
+  <div>
+    <div class="eyebrow"><a href="/funds" style="color:inherit">Funds</a> / LEI {{ f.lei }}</div>
+    <h1 style="font-size:22px">{{ f.legal_name }}</h1>
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+      {% if f.has_esg_term %}<span class="chip term">ESG term in the name: {{ f.current_esg_terms|join(', ') }}</span>{% endif %}
+      {% if f.dropped_esg_since_esma %}<span class="chip esg_removed">Removed an ESG term since May 2024</span>{% endif %}
+      {% if f.current_vague_terms %}<span class="chip word">Uses “{{ f.current_vague_terms|join('”, “') }}”</span>{% endif %}
+    </div>
+  </div>
+  <div class="actions"><a class="btn light" href="https://search.gleif.org/#/record/{{ f.lei }}" target="_blank" rel="noopener">Open in GLEIF <svg class="icon"><use href="#i-ext"/></svg></a></div>
+</div>
+
+<section class="card" style="flex:none">
+  <dl class="facts" style="margin:0">
+    <div><dt>Management company</dt><dd>{% if f.manager_name or f.manager_lei %}<a href="/renames?manager={{ (f.manager_lei or 'name:' ~ f.manager_name)|urlencode }}&scope=all">{{ f.manager_name or f.manager_lei }}</a><span class="sub">{{ f.manager_source }}</span>{% else %}<span class="muted">Not reported in GLEIF</span>{% endif %}</dd></div>
+    <div><dt>Umbrella fund</dt><dd>{% if f.umbrella_name or f.umbrella_lei %}{{ f.umbrella_name or f.umbrella_lei }}{% if f.master_name %}<span class="sub">Feeder of {{ f.master_name }}</span>{% endif %}{% else %}<span class="muted">None reported</span>{% endif %}</dd></div>
+    <div><dt>Status</dt><dd>{{ f.entity_status|lower|capitalize }} entity, LEI {{ f.registration_status|lower }}<span class="sub">Since {{ f.initial_registration_date|date }}, legal form {{ f.legal_form_code or '—' }}</span></dd></div>
+    <div><dt>Change history</dt><dd>{{ 'Checked' if f.history_checked else 'Not checked yet' }}<span class="sub">{{ f.real_renames }} real rename{{ 's' if f.real_renames != 1 }}</span></dd></div>
+  </dl>
+</section>
+
+<div class="board" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+  <section class="card fixed-h">
+    <div class="card-head"><div><h2>Name history</h2><p>Every legal name recorded by GLEIF, newest first</p></div></div>
+    <div class="card-body fill scroll">
+      <ol class="timeline">
+        {% for h in f.history|reverse %}
+        <li class="{{ 'esg' if h.has_esg_term }} {{ 'current' if h.is_current }}">
+          <div class="when">{% if h.is_current %}Since {{ h.valid_from|date }}{% else %}{{ h.valid_from|date }} to {{ h.valid_to|date }}{% endif %}</div>
+          <div class="nm">{{ h.name }}</div>
+          {% if h.esg_terms or h.vague_terms %}<div class="tags">{% for t in h.esg_terms %}<span class="chip term">{{ t }}</span>{% endfor %}{% for t in h.vague_terms %}<span class="chip word">{{ t }}</span>{% endfor %}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+  <section class="card fixed-h">
+    <div class="card-head"><div><h2>Changes</h2><p>Real renames only, word by word</p></div></div>
+    <div class="fill scroll">
+      {% if f.changes %}
+      <table class="stack">
+        <thead><tr><th style="width:110px">Date</th><th>Change</th></tr></thead>
+        <tbody>
+        {% for c in f.changes|reverse %}
+        <tr><td class="nowrap muted">{{ c.change_date|date }}</td><td><span class="name-cell">{{ c.diff }}</span><span class="sub" style="margin-top:6px"><span class="chip {{ c.category }}">{{ CATEGORY_SHORT[c.category] }}</span>{% if c.ai_rationale %} {{ c.ai_rationale }}{% endif %}</span></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty"><strong>No real rename recorded</strong>{{ '' if f.history_checked else 'The change history of this fund has not been checked yet.' }}</div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Method{% endblock %}
+{% block content %}
+{% set qd = k.quality %}
+{% set explain = {
+  'esg_removed': 'Old name had an ESG term; new one has none.',
+  'esg_to_vague': 'ESG term replaced by screened, select, tilted…',
+  'esg_reworded': 'Both names make a different ESG claim.',
+  'esg_added': 'New name makes an ESG claim the old one did not.',
+  'not_esg': 'Keyword matched but not an ESG claim (AI review).'} %}
+<div class="view-head">
+  <div><div class="eyebrow">Where the data comes from, how it is tested, and how far the figures can be trusted</div><h1>Data and method</h1></div>
+  <div class="actions">{% if tests.total %}<span class="pill"><i style="background:{{ 'var(--c-added)' if not tests.failed else 'var(--c-removed)' }}"></i>{{ tests.passed }}/{{ tests.total }} data tests passed</span>{% endif %}</div>
+</div>
+
+<section class="card" style="flex:none">
+  <div class="card-head"><div><h2>Pipeline</h2><p>Each step runs on its own, or all together with <code>python -m pipeline.run</code></p></div></div>
+  <ol class="steps">
+    <li><span class="step-n">1</span><strong>Extract</strong><p>Luxembourg funds, their dated name changes and their manager and umbrella links, from GLEIF.</p><code>extract/gleif_extract.py</code></li>
+    <li><span class="step-n">2</span><strong>Load</strong><p>CSV files into DuckDB, each load logged with its SHA-256 fingerprint.</p><code>pipeline/load_raw.py</code></li>
+    <li><span class="step-n">3</span><strong>Transform and test</strong><p>dbt models: cleaning, formatting-only changes removed, name history, ESG vocabulary, marts.</p><code>transform/</code></li>
+    <li><span class="step-n">4</span><strong>AI review</strong><p>Claude re-reads ESG renames the keyword rules found and corrects their type, with a reason.</p><code>ai/classify_names.py</code></li>
+    <li><span class="step-n">5</span><strong>Evaluate</strong><p>Rules and AI are scored against renames labelled by hand.</p><code>ai/evaluate.py</code></li>
+  </ol>
+</section>
+
+<div class="board" style="grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr)">
+  <section class="card fixed-h">
+    <div class="card-head"><div><h2>Data quality</h2><p>Last load {{ qd.last_loaded_at.strftime('%d %b %Y, %H:%M UTC') if qd.last_loaded_at else '—' }}</p></div></div>
+    <div class="card-body"><div class="stats">
+      <div class="stat"><b>{{ qd.clean_funds|int }}</b><span>funds loaded</span></div>
+      <div class="stat"><b>{{ qd.funds_history_checked|int }}</b><span>histories checked</span></div>
+      <div class="stat"><b>{{ k.funds_with_manager|int }}</b><span>with a manager</span></div>
+      <div class="stat"><b>{{ qd.clean_changes|int }}</b><span>name changes</span></div>
+      <div class="stat"><b>{{ (qd.formatting_only_changes + qd.language_tag_changes_excluded)|int }}</b><span>formatting or language-tag changes, excluded</span></div>
+      <div class="stat"><b>{{ qd.real_changes|int }}</b><span>real renames</span></div>
+    </div></div>
+    <div class="fill scroll">
+      <table>
+        <thead><tr><th>Table</th><th class="num">Rows</th><th>SHA-256</th></tr></thead>
+        <tbody>{% for l in log %}<tr><td><span class="name-cell">raw.{{ l.table_name }}</span><span class="sub">{{ l.source_file }}</span></td><td class="num">{{ l.row_count|int }}</td><td class="muted small" title="{{ l.sha256 }}">{{ l.sha256[:12] }}…</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card fixed-h">
+    <div class="card-head"><div><h2>Rename types</h2><p>From the ESG terms in the old and new names</p></div></div>
+    <div class="fill scroll">
+      <table>
+        <thead><tr><th>Type</th><th class="num">Renames</th></tr></thead>
+        <tbody>{% for key, text in explain.items() %}<tr><td><span class="chip {{ key }}">{{ CATEGORY_SHORT[key] }}</span><span class="sub">{{ text }}</span></td><td class="num">{{ cats.get(key, 0)|int }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card fixed-h">
+    <div class="card-head"><div><h2>Accuracy and limits</h2><p>Share of renames classified correctly, against a hand-labelled sample</p></div></div>
+    <div class="card-body fill scroll" style="display:flex;flex-direction:column;gap:12px">
+      {% if ev and ev.rules.n %}
+      <div class="stats" style="grid-template-columns:1fr 1fr">
+        <div class="stat"><b>{{ (100 * ev.rules.accuracy)|round|int }}%</b><span>keyword rules, {{ ev.rules.n }} renames</span></div>
+        <div class="stat"><b>{% if ev.llm.n %}{{ (100 * ev.llm.accuracy)|round|int }}%{% else %}—{% endif %}</b><span>AI review{% if ev.llm.n %}, {{ ev.llm.n }} renames{% endif %}</span></div>
+      </div>
+      {% else %}
+      <div class="notice"><svg class="icon"><use href="#i-info"/></svg><span>No labelled sample yet: <code>python -m ai.evaluate --template 60</code>, fill the <code>label</code> column, then <code>python -m ai.evaluate</code>.</span></div>
+      {% endif %}
+      <div class="prose"><ul>
+        <li>GLEIF records legal names, not marketing names; some records are updated late.</li>
+        <li>Figures over time cover only the funds whose history was checked.</li>
+        <li>Removing an ESG term is not wrongdoing: these are signals to review, not findings of non-compliance.</li>
+        <li>{% if k.funds_with_manager %}A manager is reported for {{ k.funds_with_manager|int }} of {{ k.funds|int }} funds.{% else %}Fund-manager links are not loaded yet.{% endif %}</li>
+        <li>{% if k.llm_classified %}The AI review classified {{ k.llm_classified|int }} renames.{% else %}The AI review has not run yet; types come from the keyword rules.{% endif %}</li>
+      </ul></div>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.pytest_cache/
+.ruff_cache/
+data/warehouse.duckdb*
+data/raw/*.csv
+data/ai/
+gleif_check/
+transform/target/
+transform/logs/
+transform/dbt_packages/
+logs/

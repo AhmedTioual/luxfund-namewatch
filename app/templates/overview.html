@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+{% set cat_order = ['esg_to_vague', 'esg_removed', 'esg_reworded', 'esg_added', 'not_esg'] %}
+{% set cat_var = {'esg_to_vague': '--c-vague', 'esg_removed': '--c-removed', 'esg_reworded': '--c-reworded', 'esg_added': '--c-added', 'not_esg': '--c-other'} %}
+{% set cat_total = cats.values()|sum %}
+{% set share_now = share[-1].esg_name_share if share else 0 %}
+{% set share_year_ago = share[-5].esg_name_share if share|length > 4 else share_now %}
+{% set palette = ['#2563eb', '#7c3aed', '#e5484d', '#0891b2', '#f59e0b', '#10b981'] %}
+
+<div class="view-head">
+  <div>
+    <div class="eyebrow">Luxembourg investment funds, since ESMA's fund-name guidelines of 14 May 2024</div>
+    <h1>ESG fund name monitor</h1>
+  </div>
+  <div class="actions">
+    <span class="pill"><i></i>{{ k.history_checked|int }} of {{ k.funds|int }} fund histories checked</span>
+    {% if review_total %}<a class="btn" href="/renames?review=1"><svg class="icon"><use href="#i-check"/></svg>Review {{ review_total|int }} renames</a>{% endif %}
+  </div>
+</div>
+
+<div class="board board-overview">
+  {# ---------------------------------------------------------------- briefing #}
+  <section class="card hero a-hero" aria-label="Briefing">
+    <div class="hero-left">
+      <span class="hero-tag"><b><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></b>Briefing, {{ fresh or 'no data loaded' }}</span>
+      <h2>{{ k.funds_dropped_esg|int }} funds took ESG words out of their legal name{% if review_total %}, and {{ review_total|int }} renames need a second look{% endif %}.</h2>
+      <p class="lead">{{ k.funds_esg_to_vague|int }} of them chose a vaguer word{% if words %}, most often “{{ words[0].word }}”{% if words|length > 1 %} or “{{ words[1].word }}”{% endif %}{% endif %}. Renames peak around the 21 May 2025 deadline for existing funds.</p>
+      <div class="hero-nums">
+        <div><strong>{{ k.funds_dropped_esg|int }}</strong><span><i style="background:var(--c-removed)"></i>removed an ESG term</span></div>
+        <div><strong>{{ k.funds_esg_to_vague|int }}</strong><span><i style="background:var(--c-vague)"></i>chose a vaguer word</span></div>
+        <div><strong>{{ k.esg_named_active|int }}</strong><span><i style="background:var(--c-added)"></i>active funds still ESG-named</span></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-chart-head">
+        <span>Renames per quarter &nbsp;<b>{{ k.real_renames|int }} real renames</b></span>
+        <span class="hero-legend">
+          <span><i style="background:var(--c-removed)"></i>Removed</span>
+          <span><i style="background:var(--c-vague)"></i>Vaguer word</span>
+          <span><i style="background:var(--c-reworded)"></i>Reworded</span>
+          <span><i style="background:var(--c-added)"></i>Added</span>
+          <span><i style="background:var(--c-other)"></i>Other</span>
+          <span><i style="background:none;border-left:2px dashed var(--brand);border-radius:0;width:2px;height:12px"></i>Deadline, 21 May 2025</span>
+        </span>
+      </div>
+      <div id="c-brief" class="chart fill" role="img" aria-label="Stacked bars of fund renames per quarter by type"></div>
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- review panel #}
+  <section class="card a-side" aria-labelledby="q-title">
+    <div class="card-head">
+      <div><h2 id="q-title">To review<span class="count">{{ review_total|int }}</span></h2><p>Renames matched on an ambiguous word, or classified by the AI with low confidence</p></div>
+      <a class="link-more" href="/renames?review=1">See all</a>
+    </div>
+    <div class="fill scroll">
+      {% if review %}
+        {% set f = review[0] %}
+        <div class="focus">
+          <div class="focus-top"><span><svg class="icon" style="width:13px;height:13px;vertical-align:-2px"><use href="#i-clock"/></svg> {{ f.change_date|date }}</span><span class="chip {{ 'ai' if f.category_source == 'llm' else '' }}">{{ 'AI confidence ' ~ ((100 * f.ai_confidence)|round|int) ~ '%' if f.category_source == 'llm' else 'Keyword match' }}</span></div>
+          <h3>{% if f.ambiguous %}Is “{{ f.ambiguous[0] }}” an ESG claim here?{% else %}Confirm the type of this rename{% endif %}</h3>
+          <div class="by"><span class="dot" style="background:var(--brand)"></span><b class="ellipsis">{{ f.manager_name or 'Manager not reported' }}</b></div>
+          <div class="doc"><span class="lbl">Legal name change recorded by GLEIF</span>{{ f.diff }}</div>
+          {% if f.ai_rationale %}<p class="why">{{ f.ai_rationale }}</p>{% endif %}
+          <div class="tags">
+            <span class="chip {{ f.category }}">{{ CATEGORY_SHORT[f.category] }}</span>
+            {% for a in f.ambiguous %}<span class="chip word">“{{ a }}” has other meanings</span>{% endfor %}
+          </div>
+          <div class="acts">
+            <a class="btn sm" href="/funds/{{ f.lei }}">Open name history</a>
+            <a class="btn sm light" href="https://search.gleif.org/#/record/{{ f.lei }}" target="_blank" rel="noopener">GLEIF <svg class="icon"><use href="#i-ext"/></svg></a>
+          </div>
+        </div>
+        <ul class="items">
+          {% for r in review[1:] %}
+          <li><a href="/funds/{{ r.lei }}">
+            <span class="sq {{ r.category }}">{{ (r.ambiguous[0] if r.ambiguous else 'ai')[:2]|upper }}</span>
+            <span style="min-width:0"><span class="t ellipsis" style="display:block">{{ r.new_name }}</span><span class="s ellipsis" style="display:block">was {{ r.old_name }}</span></span>
+            <span class="r">{{ r.change_date|date }}<span class="chip {{ r.category }}">{{ ('“' ~ r.ambiguous[0] ~ '”') if r.ambiguous else 'low confidence' }}</span></span>
+          </a></li>
+          {% endfor %}
+        </ul>
+        {% if review_total > review|length %}<a class="more-row" href="/renames?review=1">See the other {{ (review_total - review|length)|int }} renames to review</a>{% endif %}
+      {% else %}
+        <div class="empty"><strong>Nothing to review</strong>No ambiguous ESG rename in the data.</div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- rename types #}
+  <section class="card a-donut" aria-labelledby="t-title">
+    <div class="card-head"><div><h2 id="t-title">Rename types</h2><p>ESG-related renames since 14 May 2024</p></div><a class="link-more" href="/insights">Insights</a></div>
+    <div class="card-body fill" style="display:flex;flex-direction:column;gap:12px">
+      <div class="donut-wrap fill">
+        <div id="c-donut" class="chart" role="img" aria-label="Donut chart of ESG-related rename types"></div>
+        <ul class="legend-list">
+          {% for c in cat_order if cats.get(c) %}
+          <li><span class="dot" style="background:var({{ cat_var[c] }})"></span><span>{{ CATEGORY_SHORT[c] }}</span><b>{{ (100 * cats[c] / cat_total)|round|int if cat_total else 0 }}%</b></li>
+          {% else %}
+          <li><span class="dot"></span><span>No ESG-related rename yet</span><b></b></li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="minis">
+        <div class="mini">
+          <span class="lbl">ESG-named funds</span>
+          <div><strong>{{ share_now }}%</strong><span class="d {{ 'down' if share_now < share_year_ago else 'up' }}">{{ '%+.1f'|format(share_now - share_year_ago) }} pts, 1 year</span></div>
+          <svg class="spark" width="70" height="26" aria-hidden="true"><polyline fill="none" stroke="var(--brand)" stroke-width="1.8" stroke-linejoin="round" points="{{ sparkline(share[-12:]|map(attribute='esg_name_share')|list, 70, 26) }}"/></svg>
+        </div>
+        <div class="mini">
+          <span class="lbl">Renames since May 2024</span>
+          <div><strong>{{ k.renames_since_esma|int }}</strong><span class="d" style="color:var(--ink-3)">all types</span></div>
+          <svg class="spark" width="70" height="26" aria-hidden="true"><polyline fill="none" stroke="var(--c-removed)" stroke-width="1.8" stroke-linejoin="round" points="{{ sparkline(quarters[-12:]|map(attribute='renames')|list, 70, 26) }}"/></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- managers #}
+  <section class="card a-table" aria-labelledby="m-title">
+    <div class="card-head"><div><h2 id="m-title">Management companies</h2><p>Most ESG removals since May 2024, from GLEIF fund-manager links</p></div><a class="link-more" href="/houses">All managers</a></div>
+    {% if managers %}
+    <div class="fill scroll">
+      <table style="table-layout:fixed">
+        <colgroup><col><col style="width:108px"><col style="width:64px"><col style="width:84px"></colgroup>
+        <thead><tr><th>Company</th><th>Trend since 2024</th><th class="num">Funds</th><th class="num">Removed</th></tr></thead>
+        <tbody>
+        {% for m in managers %}
+        {% set col = palette[loop.index0 % palette|length] %}
+        <tr>
+          <td><a class="who" href="/renames?manager={{ m.manager_key|urlencode }}" style="color:inherit;min-width:0"><span class="sq" style="background:{{ col }}">{{ (m.manager_name or '?')[:2]|upper }}</span><span style="min-width:0"><span class="n ellipsis" style="display:block">{{ m.manager_name or m.manager_lei }}</span><span class="s">{{ m.share }}% of its funds</span></span></a></td>
+          <td><svg class="spark" width="84" height="26" aria-hidden="true"><polyline fill="none" stroke="{{ col }}" stroke-width="1.8" stroke-linejoin="round" points="{{ sparkline(m.series, 84, 26) }}"/></svg></td>
+          <td class="num">{{ m.funds|int }}</td>
+          <td class="num {{ 'hot' if m.share >= 10 }}">{{ m.dropped_esg_since_esma|int }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><strong>No manager links loaded</strong>Run <code>gleif_extract.py --relationships</code>.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('vendor/echarts.min.js') }}"></script>
+<script src="{{ asset('charts.js') }}"></script>
+<script>
+(function () {
+  var c = NW.c, Q = {{ quarters|tojson_safe }}, CATS = {{ cats|tojson_safe }}, SHORT = {{ CATEGORY_SHORT|tojson_safe }};
+  // ---- briefing: stacked bars per quarter, with the total on top of each bar
+  var b = NW.init('c-brief');
+  if (b) {
+    var R = Q.filter(function (r) { return r.quarter_start >= '2022-01-01'; });
+    var labels = R.map(function (r) { return r.quarter.replace('-', ' '); });
+    var totals = R.map(function (r) { return r.renames; });
+    var peak = Math.max.apply(null, totals.concat([1]));
+    // 12 500 -> "12.5k", 900 -> "900": short labels that never get cut off
+    var fmt = function (v) { return v >= 1000 ? (Math.round(v / 100) / 10).toString().replace(/\.0$/, '') + 'k' : String(v); };
+    var bar = function (key, name, color) {
+      return { name: name, type: 'bar', stack: 'r', barWidth: '62%', data: R.map(function (r) { return r[key]; }),
+        itemStyle: { color: color, borderColor: '#fff', borderWidth: 0.5 }, emphasis: { focus: 'series' } };
+    };
+    var series = [bar('esg_removed', 'ESG term removed', c.removed), bar('esg_to_vague', 'Replaced by a vaguer word', c.vague),
+      bar('esg_reworded', 'ESG claim reworded', c.reworded), bar('esg_added', 'ESG term added', c.added),
+      bar('other_rename', 'Other renames', c.other)];
+    // round the top of each stack and print its total when it is a notable quarter
+    series[4].itemStyle.borderRadius = [4, 4, 0, 0];
+    series[4].z = 10;  // totals above the deadline line
+    series[4].label = { show: true, position: 'top', distance: 4, color: c.ink2, fontFamily: NW.font, fontSize: 11, fontWeight: 600, backgroundColor: '#fff', padding: [1, 3], borderRadius: 3,
+      formatter: function (p) { var t = totals[p.dataIndex]; return t >= peak * 0.25 ? fmt(t) : ''; } };
+    if (labels.indexOf('2025 Q2') >= 0) series[0].markLine = { symbol: 'none', silent: true,
+      lineStyle: { color: c.brand, type: [4, 3], width: 1.2 },
+      label: { show: false },
+      data: [{ xAxis: '2025 Q2' }] };
+    b.setOption({
+      grid: { left: 6, right: 8, top: 22, bottom: 4, containLabel: true },
+      tooltip: NW.tooltip({ trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(37,99,235,0.06)' } },
+        formatter: function (ps) {
+          var t = totals[ps[0].dataIndex];
+          return '<b>' + ps[0].axisValue + '</b>: ' + t.toLocaleString('en').replace(/,/g, ' ') + ' renames<br>' + ps.filter(function (p) { return p.value; }).reverse()
+            .map(function (p) { return p.marker + p.seriesName + ': <b>' + p.value + '</b>'; }).join('<br>');
+        } }),
+      xAxis: { type: 'category', data: labels, axisLine: { lineStyle: { color: c.rule } }, axisTick: { show: false },
+        axisLabel: { color: c.ink2, fontFamily: NW.font, fontSize: 11, interval: 3 } },
+      yAxis: { type: 'value', minInterval: 1, splitNumber: 4, axisLabel: { color: c.ink3, fontFamily: NW.font, fontSize: 11, margin: 10, formatter: fmt },
+        splitLine: { lineStyle: { color: c.soft } } },
+      series: series
+    });
+  }
+  // ---- donut
+  var d = NW.init('c-donut');
+  if (d) {
+    var order = [['esg_to_vague', c.vague], ['esg_removed', c.removed], ['esg_reworded', c.reworded], ['esg_added', c.added], ['not_esg', c.other]];
+    var data = order.filter(function (o) { return CATS[o[0]]; }).map(function (o) { return { name: SHORT[o[0]], value: CATS[o[0]], itemStyle: { color: o[1] } }; });
+    var total = data.reduce(function (s, x) { return s + x.value; }, 0);
+    d.setOption({
+      tooltip: NW.tooltip({ trigger: 'item', formatter: '{b}: <b>{c}</b> ({d}%)' }),
+      series: [{ type: 'pie', radius: ['68%', '92%'], padAngle: 2, itemStyle: { borderRadius: 4 }, avoidLabelOverlap: false,
+        label: { show: true, position: 'center', formatter: '{v|' + total + '}\n{l|renames}',
+          rich: { v: { fontSize: 24, fontWeight: 600, color: c.ink, fontFamily: NW.font }, l: { fontSize: 11, color: c.ink3, fontFamily: NW.font, padding: [4, 0, 0, 0] } } },
+        labelLine: { show: false }, emphasis: { scale: false }, data: data.length ? data : [{ value: 1, name: 'none', itemStyle: { color: c.soft } }] }]
+    });
+  }
+})();
+</script>
+{% endblock %}

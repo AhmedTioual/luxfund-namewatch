@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: stg_funds
+    description: Clean Luxembourg fund records (one per LEI).
+    columns:
+      - name: lei
+        tests: [unique, not_null]
+      - name: entity_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["ACTIVE", "INACTIVE", "NULL", "UNKNOWN"]
+  - name: stg_name_changes
+    description: Dated legal-name changes, with a formatting-only flag.
+    columns:
+      - name: change_id
+        tests: [unique, not_null]
+      - name: change_date
+        tests: [not_null]
+      - name: lei
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_funds')
+                field: lei
+              config:
+                severity: warn
+  - name: int_name_terms
+    columns:
+      - name: name
+        tests: [unique, not_null]
+  - name: int_name_history
+    description: Type-2 name history (valid_from inclusive, valid_to exclusive).
+    columns:
+      - name: lei
+        tests: [not_null]
+  - name: int_fund_links
+    description: Current manager, umbrella and master fund of each fund.
+    columns:
+      - name: lei
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_funds')
+                field: lei
+              config:
+                severity: warn
+  - name: dim_fund
+    columns:
+      - name: lei
+        tests: [unique, not_null]
+      - name: manager_source
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["GLEIF relationship record", "Fund LEI record (associated entity)"]
+  - name: agg_fund_managers
+    columns:
+      - name: manager_key
+        tests: [unique, not_null]
+  - name: fct_renames
+    columns:
+      - name: change_id
+        tests: [unique, not_null]
+      - name: category
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["esg_removed", "esg_to_vague", "esg_reworded", "esg_added", "other_rename", "not_esg"]
+  - name: mart_kpis
+    tests:
+      - dbt_utils_free_single_row

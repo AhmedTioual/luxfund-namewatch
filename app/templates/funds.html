@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Funds{% endblock %}
+{% block content %}
+<div class="view-head">
+  <div><div class="eyebrow">Search by current or earlier legal name, or by LEI</div><h1>Funds</h1></div>
+</div>
+<section class="card fill">
+  <form class="toolbar" method="get" action="/funds" role="search">
+    <div class="grow"><label class="sr-only" for="fq">Fund name or LEI</label><input id="fq" type="search" name="q" value="{{ q }}" placeholder="e.g. sustainable, climate, or a 20-character LEI" autofocus></div>
+    <button class="btn sm" type="submit">Search</button>
+  </form>
+  <div class="fill scroll scroll-lg">
+  {% if q %}
+    {% if results %}
+    <table class="stack">
+      <thead><tr><th>Legal name today</th><th>LEI</th><th>Status</th><th class="num">Real renames</th></tr></thead>
+      <tbody>
+      {% for r in results %}
+      <tr><td><a class="name-cell" href="/funds/{{ r.lei }}">{{ r.legal_name }}</a></td><td class="muted small">{{ r.lei }}</td><td>{{ r.entity_status|lower|capitalize }}</td><td class="num">{{ r.real_renames }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><strong>No fund matches “{{ q }}”</strong>Try part of the name, or the full LEI.</div>
+    {% endif %}
+  {% else %}
+    <div class="empty"><strong>Find a Luxembourg fund</strong>Type part of a name, current or former, or an LEI.</div>
+  {% endif %}
+  </div>
+</section>
+{% endblock %}

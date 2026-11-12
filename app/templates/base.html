@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Overview{% endblock %} | LuxFund NameWatch</title>
+  <meta name="description" content="How Luxembourg investment funds renamed after the ESMA guidelines on ESG fund names, from public GLEIF data.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%232563eb'/%3E%3Cpath d='M9 11h14M9 16h8M9 21h14' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ asset('style.css') }}">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16M7 16v-5M12 16V7M17 16v-8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 12.5h8M8 16h5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 20V7l8-3.5L20 7v13M4 20h16M9.5 20v-4h5v4M8 10h.01M12 10h.01M16 10h.01M8 13.5h.01M12 13.5h.01M16 13.5h.01"/></symbol>
+  <symbol id="i-flow" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="12" r="2.2"/><path d="M8.2 6H11a3 3 0 0 1 3 3v0a3 3 0 0 0 1.8 2.7M8.2 18H11a3 3 0 0 0 3-3"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8.5 8l-4.5 4 4.5 4M15.5 8l4.5 4-4.5 4"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+</svg>
+<div class="app">
+  <nav class="rail" aria-label="Main">
+    <a class="rail-logo" href="/" aria-label="LuxFund NameWatch, overview"><svg viewBox="0 0 24 24"><path d="M6 8h12M6 12h7M6 16h12"/></svg></a>
+    <a class="ri" href="/" {% if active == 'overview' %}aria-current="page"{% endif %}><span class="ib"><svg class="icon"><use href="#i-home"/></svg></span>Overview</a>
+    <a class="ri" href="/insights" {% if active == 'insights' %}aria-current="page"{% endif %}><span class="ib"><svg class="icon"><use href="#i-chart"/></svg></span>Insights</a>
+    <a class="ri" href="/renames" {% if active == 'renames' %}aria-current="page"{% endif %}><span class="ib"><svg class="icon"><use href="#i-list"/></svg></span>Renames</a>
+    <a class="ri" href="/funds" {% if active == 'funds' %}aria-current="page"{% endif %}><span class="ib"><svg class="icon"><use href="#i-search"/></svg></span>Funds</a>
+    <a class="ri" href="/houses" {% if active == 'houses' %}aria-current="page"{% endif %}><span class="ib"><svg class="icon"><use href="#i-building"/></svg></span>Managers</a>
+    <span class="spacer"></span>
+    <a class="ri opt" href="/method" {% if active == 'method' %}aria-current="page"{% endif %}><span class="ib"><svg class="icon"><use href="#i-flow"/></svg></span>Method</a>
+    <a class="ri opt" href="/docs"><span class="ib"><svg class="icon"><use href="#i-code"/></svg></span>API</a>
+  </nav>
+  <div class="main">
+    <header class="topbar">
+      <span class="ws"><i><svg viewBox="0 0 24 24"><path d="M6 8h12M6 12h7M6 16h12"/></svg></i>LuxFund NameWatch <span>Luxembourg, GLEIF register</span></span>
+      <span class="grow"></span>
+      <form method="get" action="/funds" role="search">
+        <label class="search"><span class="sr-only">Search a fund by name or LEI</span><svg class="icon"><use href="#i-search"/></svg><input type="search" name="q" placeholder="Search a fund or LEI   ( / )" value="{{ q or '' }}"></label>
+      </form>
+      {% if fresh %}<span class="pill" title="Last pipeline load"><i></i>Data {{ fresh }}</span>{% endif %}
+    </header>
+    <main class="view" id="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script>
+document.addEventListener('keydown', function (e) {
+  if (e.key === '/' && !/input|textarea|select/i.test(document.activeElement.tagName)) {
+    var s = document.querySelector('.search input'); if (s) { e.preventDefault(); s.focus(); }
+  }
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

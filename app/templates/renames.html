@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Renames{% endblock %}
+{% block content %}
+{% macro url() -%}
+{%- set p = dict(filters, **kwargs) -%}
+/renames?{% for key, val in p.items() if val %}{{ key }}={{ val|urlencode }}&{% endfor %}
+{%- endmacro %}
+<div class="view-head">
+  <div>
+    <div class="eyebrow">Every legal-name change, word by word: removed words struck through, added words underlined</div>
+    <h1>Renames</h1>
+  </div>
+  <div class="actions"><span class="pill">{{ total|int }} result{{ 's' if total != 1 }}</span></div>
+</div>
+
+<section class="card fill">
+  <div class="toolbar">
+    <nav class="seg" aria-label="Type of rename">
+      <a href="{{ url(category='', review='', page_no='') }}" aria-current="{{ 'true' if not filters.category and not filters.review else 'false' }}">All types</a>
+      <a href="{{ url(review='1', category='', page_no='') }}" aria-current="{{ 'true' if filters.review else 'false' }}">To review</a>
+      {% for key in ['esg_to_vague', 'esg_removed', 'esg_reworded', 'esg_added'] %}
+      <a href="{{ url(category=key, review='', page_no='') }}" aria-current="{{ 'true' if filters.category == key else 'false' }}"><span class="dot" style="background:var(--c-{{ {'esg_to_vague':'vague','esg_removed':'removed','esg_reworded':'reworded','esg_added':'added'}[key] }})"></span>{{ CATEGORY_SHORT[key] }}</a>
+      {% endfor %}
+    </nav>
+    <form method="get" action="/renames" role="search" style="display:contents">
+      {% for key in ['category', 'review', 'prefix', 'manager'] if filters[key] %}<input type="hidden" name="{{ key }}" value="{{ filters[key] }}">{% endfor %}
+      <div class="grow"><label class="sr-only" for="q">Search a name or LEI</label><input id="q" type="search" name="q" value="{{ filters.q }}" placeholder="Search a name or LEI"></div>
+      <label class="sr-only" for="phase">Period</label>
+      <select id="phase" name="phase" onchange="this.form.submit()">
+        <option value="">Any period</option>
+        {% for ph in PHASES %}<option value="{{ ph }}" {% if filters.phase == ph %}selected{% endif %}>{{ ph[3:] }}</option>{% endfor %}
+      </select>
+      <label class="sr-only" for="scope">Scope</label>
+      <select id="scope" name="scope" onchange="this.form.submit()">
+        <option value="esg" {% if filters.scope != 'all' %}selected{% endif %}>ESG-related</option>
+        <option value="all" {% if filters.scope == 'all' %}selected{% endif %}>All real renames</option>
+      </select>
+      <button class="sr-only" type="submit">Apply</button>
+    </form>
+    {% if filters.prefix %}<a class="chip" href="{{ url(prefix='', page_no='') }}" title="Remove this filter">Name starts with {{ filters.prefix }} &times;</a>{% endif %}
+    {% if filters.manager %}<a class="chip" href="{{ url(manager='', page_no='') }}" title="Remove this filter">Managed by {{ manager_label or filters.manager }} &times;</a>{% endif %}
+  </div>
+  <div class="fill scroll scroll-lg">
+    {% set latest = items %}
+    {% include "_rename_list.html" %}
+  </div>
+  <nav class="pager" aria-label="Pages">
+    <span>Page {{ page_no }} of {{ pages }}</span>
+    <div>
+      {% if page_no > 1 %}<a class="btn sm light" href="{{ url(page_no=page_no - 1) }}">Previous</a>{% endif %}
+      {% if page_no < pages %}<a class="btn sm light" href="{{ url(page_no=page_no + 1) }}">Next</a>{% endif %}
+    </div>
+  </nav>
+</section>
+{% endblock %}

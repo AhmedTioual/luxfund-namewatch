@@ -1,0 +1,22 @@
+[project]
+name = "luxfund-namewatch"
+version = "0.1.0"
+description = "How Luxembourg funds renamed after the ESMA guidelines on ESG fund names, from public GLEIF data."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["transform/target", "transform/dbt_packages"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/fixtures/*" = ["E501"]
+"ai/classify_names.py" = ["E501"]
+"extract/*" = ["E501", "SIM", "B"]

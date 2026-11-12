@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Managers{% endblock %}
+{% block content %}
+{% set top = (items|map(attribute='dropped_esg_since_esma')|max) if items else 1 %}
+{% set cov = (100 * k.active_funds_with_manager / k.active_funds)|round|int if k.active_funds else 0 %}
+<div class="view-head">
+  <div>
+    <div class="eyebrow">{% if by == 'manager' %}From GLEIF fund-manager links. One management company often runs funds sold under several brands.{% else %}Grouped by the first word of the fund name, for funds without a reported manager{% endif %}</div>
+    <h1>Management companies</h1>
+  </div>
+  <nav class="seg" aria-label="Group funds by">
+    <a href="/houses?by=manager" aria-current="{{ 'true' if by == 'manager' else 'false' }}">Reported manager</a>
+    <a href="/houses?by=prefix" aria-current="{{ 'true' if by == 'prefix' else 'false' }}">Name prefix</a>
+  </nav>
+</div>
+
+{% if k.funds_with_manager %}
+<div class="kpis" style="flex:none">
+  <div class="card kpi"><span class="lbl">Funds with a reported manager</span><strong>{{ k.funds_with_manager|int }}</strong><div class="note">{{ cov }}% of active funds</div></div>
+  <div class="card kpi"><span class="lbl">Management companies</span><strong>{{ k.managers|int }}</strong><div class="note">linked to Luxembourg funds</div></div>
+  <div class="card kpi"><span class="lbl">Sub-funds linked to an umbrella</span><strong>{{ k.funds_with_umbrella|int }}</strong><div class="note">GLEIF “is sub-fund of” links</div></div>
+  <div class="card kpi"><span class="lbl">Funds without a reported manager</span><strong>{{ (k.funds - k.funds_with_manager)|int }}</strong><div class="note">see the Name prefix tab</div></div>
+</div>
+{% else %}
+<div class="notice" style="flex:none"><svg class="icon"><use href="#i-info"/></svg><span>No fund-manager links loaded yet. Run <code>python extract/gleif_extract.py --relationships</code>, copy the CSV files to <code>data/raw/</code>, then <code>python -m pipeline.run</code>.</span></div>
+{% endif %}
+
+<section class="card fill">
+  <div class="fill scroll scroll-lg">
+    <table class="stack">
+      {% if by == 'manager' %}
+      <thead><tr><th>Management company</th><th class="num">Funds</th><th class="num">Active</th><th class="num" title="Distinct first words in the managed funds' names">Brands</th><th class="num">ESG name today</th><th style="min-width:200px">Removed an ESG term since May 2024</th><th>Most used replacement</th></tr></thead>
+      <tbody>
+      {% for h in items %}
+      <tr>
+        <td><a class="who" href="/renames?manager={{ h.manager_key|urlencode }}" style="color:inherit"><span class="sq" style="background:var(--brand)">{{ (h.manager_name or '?')[:2]|upper }}</span><span style="min-width:0"><span class="n">{{ h.manager_name or h.manager_lei }}</span><span class="s" style="display:block">{{ h.manager_lei or 'No LEI reported' }}{% if h.manager_country %}, {{ h.manager_country }}{% endif %}</span></span></a></td>
+        <td class="num">{{ h.funds|int }}</td>
+        <td class="num">{{ h.active_funds|int }}</td>
+        <td class="num">{{ h.name_prefixes|int }}</td>
+        <td class="num">{{ h.esg_named_now|int }}</td>
+        <td><div style="display:flex;gap:10px;align-items:center"><span style="min-width:3ch;text-align:right">{{ h.dropped_esg_since_esma }}</span><div class="bar" style="flex:1"><span style="width:{{ (100 * h.dropped_esg_since_esma / (top or 1))|round|int }}%"></span></div></div></td>
+        <td>{% if h.favourite_replacement %}<span class="chip word">{{ h.favourite_replacement }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7"><div class="empty"><strong>No manager links loaded</strong>See the note above.</div></td></tr>
+      {% endfor %}
+      </tbody>
+      {% else %}
+      <thead><tr><th>Name starts with</th><th class="num">Funds</th><th class="num">Active</th><th class="num">ESG name today</th><th style="min-width:200px">Removed an ESG term since May 2024</th><th>Most used replacement</th></tr></thead>
+      <tbody>
+      {% for h in items %}
+      <tr>
+        <td><a class="name-cell" href="/renames?prefix={{ h.name_prefix|urlencode }}">{{ h.name_prefix }}</a></td>
+        <td class="num">{{ h.funds|int }}</td>
+        <td class="num">{{ h.active_funds|int }}</td>
+        <td class="num">{{ h.esg_named_now|int }}</td>
+        <td><div style="display:flex;gap:10px;align-items:center"><span style="min-width:3ch;text-align:right">{{ h.dropped_esg_since_esma }}</span><div class="bar" style="flex:1"><span style="width:{{ (100 * h.dropped_esg_since_esma / (top or 1))|round|int }}%"></span></div></div></td>
+        <td>{% if h.favourite_replacement %}<span class="chip word">{{ h.favourite_replacement }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+      {% endif %}
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,27 @@
+term,kind,esma_category,pattern,note
+esg,esg,esg,\besg\b,Generic ESG term
+sri,esg,esg,\b(sri|isr)\b,Socially responsible investment label
+responsible,esg,esg,\bresponsib,Responsible investment
+ethical,esg,esg,\bethic,Ethical
+sustainable,esg,sustainable,\b(sustainab|durable|nachhaltig),Sustainable: 80% + PAB exclusions + meaningful sustainable investments
+sdg,esg,sustainable,\bsdgs?\b,UN Sustainable Development Goals
+impact,esg,impact,\bimpact\b,Impact: 80% + PAB exclusions + measurable positive impact
+green,esg,environmental,\bgreen\b,Environmental: 80% + PAB exclusions
+climate,esg,environmental,\bclima,Environmental: 80% + PAB exclusions
+environmental,esg,environmental,\benvironment,Environmental: 80% + PAB exclusions
+net zero,esg,environmental,\bnet ?zero\b,Environmental: 80% + PAB exclusions
+low carbon,esg,environmental,\b(low carbon|decarboni|carbon transition|paris aligned)\b,Environmental: 80% + PAB exclusions
+transition,esg,transition,\btransition,Transition: 80% + CTB exclusions (check the meaning: LDI or share-class transitions are not ESG)
+social,esg,social,\b(social|solidar),Social: 80% + CTB exclusions
+governance,esg,governance,\bgovernance\b,Governance: 80% + CTB exclusions
+screened,vague,,\bscreen,Replacement word after an ESG term was removed
+select,vague,,\bselect,Replacement word after an ESG term was removed
+enhanced,vague,,\benhanced\b,Replacement word after an ESG term was removed
+tilted,vague,,\btilt,Replacement word after an ESG term was removed
+leaders,vague,,\b(leaders?|best in class)\b,Replacement word after an ESG term was removed
+quality,vague,,\bquality\b,Replacement word after an ESG term was removed
+exclusion,vague,,\bexclu,Replacement word after an ESG term was removed
+conscious,vague,,\b(conscious|aware|future|tomorrow)\b,Replacement word after an ESG term was removed
+scored,vague,,\bscored\b,Listed by ESMA (Jan 2026) among words that replaced ESG terms
+advanced,vague,,\badvanced\b,Listed by ESMA (Jan 2026) among words that replaced ESG terms
+committed,vague,,\bcommitted\b,Listed by ESMA (Jan 2026) among words that replaced ESG terms
