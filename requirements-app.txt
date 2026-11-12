@@ -1,0 +1,5 @@
+# Only what the dashboard needs to run (no dbt, no AI client): used by the hosted app.
+duckdb==2.0.0
+fastapi>=0.115
+uvicorn[standard]>=0.30
+jinja2>=3.1

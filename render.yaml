@@ -1,0 +1,14 @@
+# Render blueprint: free web service that serves the dashboard from deploy/namewatch.duckdb.
+services:
+  - type: web
+    name: luxfund-namewatch
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-app.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: NAMEWATCH_DB
+        value: deploy/namewatch.duckdb
+      - key: PYTHON_VERSION
+        value: 3.12.7
